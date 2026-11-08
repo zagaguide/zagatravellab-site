@@ -124,7 +124,9 @@
       var cur = end - bw; hb.style.left = (cur - abr.left) + 'px'; cur -= gap;
       for (var k = order.length - 1; k >= 0; k--) {
         var i = order[k], nl = cur - R[i].width;
-        nav[i].style.transform = 'translateX(' + (nl - R[i].left) + 'px)'; cur = nl - gap;
+        /* на широких экранах Тильда масштабирует элементы Zero (≈1,6 на 1920) — сдвиг translateX тоже масштабируется, поэтому делим на масштаб */
+        var sc = nav[i].offsetWidth ? R[i].width / nav[i].offsetWidth : 1;
+        nav[i].style.transform = 'translateX(' + (nl - R[i].left) / (sc || 1) + 'px)'; cur = nl - gap;
       }
     }
     hb.style.top = (lastR.top + lastR.height / 2 - abr.top - 22) + 'px';
