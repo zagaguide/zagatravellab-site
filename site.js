@@ -200,7 +200,16 @@
     rememberCards(); spacer(); update();
     setInterval(tick, 600);
     setTimeout(function () { rememberCards(); spacer(); update(); }, 1500);
-    window.addEventListener('resize', function () { spacer(); update(); });
+    /* Тильда перестраивает шапку (Zero) уже после события resize — сразу считать по старым позициям:
+       пункты меню наезжают друг на друга и на кнопку (10.11.2026). Поэтому пересчёт ещё два раза. */
+    var rz1, rz2;
+    window.addEventListener('resize', function () {
+      spacer(); update();
+      clearTimeout(rz1); clearTimeout(rz2);
+      rz1 = setTimeout(function () { spacer(); update(); }, 300);
+      rz2 = setTimeout(function () { spacer(); update(); }, 1000);
+    });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { spacer(); update(); });
     new MutationObserver(function (ms) {
       ms.forEach(function (m) { if (m.target.classList && m.target.classList.contains('t706__cartwin') && m.target.classList.contains('t706__cartwin_showed')) renderRoute(); });
     }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
