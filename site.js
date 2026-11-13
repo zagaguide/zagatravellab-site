@@ -222,4 +222,83 @@
   if (location.hash === '#route') window.addEventListener('load', function () {
     setTimeout(function () { var i = document.querySelector('.t706__carticon'); if (i) i.click(); }, 900);
   });
+
+  /* 5. «Откуда вы о нас узнали?» во всех формах + первый заход (13.11.2026, план «мостик соцсети → туры»).
+        Тильда отправляет все поля формы с name (t_serializeArray), поэтому добавленные сюда поля приходят в заявке.
+        Первый заход (utm / сайт-источник / страница входа / дата) запоминается в localStorage при первом визите. */
+  (function () {
+    var KEY = 'zt-first-touch';
+    try {
+      if (!localStorage.getItem(KEY)) {
+        var q = new URLSearchParams(location.search), ref = '';
+        try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
+        if (ref === location.hostname) ref = '';
+        var parts = [];
+        ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { if (q.get(k)) parts.push(k.slice(4) + '=' + q.get(k)); });
+        parts.push('ref=' + (ref || 'прямой'));
+        parts.push('вход=' + location.pathname);
+        parts.push(new Date().toISOString().slice(0, 10));
+        localStorage.setItem(KEY, parts.join('; '));
+      }
+    } catch (e) {}
+    function first() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
+
+    var TX = {en: {
+      title: 'How did you hear about us?', ph: 'Choose an option (optional)',
+      opts: ['Instagram Reels', 'Instagram profile or stories', 'YouTube', 'TikTok', 'Google search',
+             'Telegram channel', 'Recommended by friends', 'I have travelled with you before', 'Other']
+    }, ru: {
+      title: 'Откуда вы о нас узнали?', ph: 'Выберите (необязательно)',
+      opts: ['Рилс в Instagram', 'Профиль или сторис в Instagram', 'YouTube', 'TikTok', 'Поиск Google или Яндекс',
+             'Telegram-канал', 'Посоветовали знакомые', 'Уже ездил(а) с вами', 'Другое']
+    }};
+    /* Внешний вид — как у поля «Имя» этой же формы (у квиза и обычных форм разные стили). */
+    function look(sel, ref) {
+      if (!ref) return;
+      var cs = getComputedStyle(ref);
+      ['border', 'borderRadius', 'backgroundColor', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom',
+       'fontSize', 'fontFamily', 'fontWeight'].forEach(function (k) { sel.style[k] = cs[k]; });
+      if (/px$/.test(cs.height)) sel.style.height = cs.height; else sel.style.height = '60px';
+      var col = cs.color;
+      function tint() { sel.style.color = sel.value ? col : '#8a8a8a'; }
+      sel.addEventListener('change', tint); tint();
+    }
+
+    function add(form) {
+      if (form.querySelector('.zt-found') || form.closest('.t706__orderform') || !form.querySelector('.t-input-group')) return;
+      /* Язык — по форме: у английских согласие ведёт на /en/policy (английский квиз стоит и на русских страницах). */
+      var EN = !!form.querySelector('a[href*="/en/policy"]') || /^\/en(\/|$)/.test(location.pathname) && !form.querySelector('a[href="/policy"]');
+      var T = EN ? TX.en : TX.ru;
+      var box = document.createElement('div');
+      box.className = 't-input-group t-input-group_sb zt-found';
+      var ref = form.querySelector('.t-input-group_nm input.t-input') || form.querySelector('input.t-input');
+      var sel = '<select name="' + (EN ? 'Found_us' : 'Откуда_узнали') + '" class="t-select">' +
+        '<option value="">' + T.ph + '</option>' +
+        T.opts.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>';
+      box.innerHTML = '<div class="t-input-title t-descr t-descr_md">' + T.title + '</div>' +
+        '<div class="t-input-block"><div class="t-select__wrapper">' + sel + '</div></div>';
+      var hid = document.createElement('input');
+      hid.type = 'hidden'; hid.name = EN ? 'First_visit' : 'Первый_заход'; hid.value = first();
+      box.appendChild(hid);
+      var cb = form.querySelectorAll('.t-input-group_cb'), anchor = cb.length ? cb[cb.length - 1] : null;
+      /* В квизе каждое поле обёрнуто в .t-quiz__step__input — нужна своя обёртка. */
+      if (anchor && anchor.parentNode.classList.contains('t-quiz__step__input')) {
+        var w = document.createElement('div');
+        w.className = 't-quiz__step__input';
+        w.appendChild(box);
+        anchor = anchor.parentNode;
+        anchor.parentNode.insertBefore(w, anchor);
+      } else if (anchor) anchor.parentNode.insertBefore(box, anchor);
+      else {
+        var sub = form.querySelector('.t-form__submit');
+        if (sub) sub.parentNode.insertBefore(box, sub); else return;
+      }
+      look(box.querySelector('select'), ref);
+    }
+    function scan() { document.querySelectorAll('form.t-form').forEach(add); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();
+    window.addEventListener('load', scan);
+    setTimeout(scan, 2000);
+    setTimeout(scan, 5000);
+  })();
 })();
